@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>武士道就是恶魔之路</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #222;
+        }
+
+        #game-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background: #333;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: #f0f0f0;
+            padding: 20px;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .char-select {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .char-btn {
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            cursor: pointer;
+            overflow: hidden;
+            width: 60px;
+            height: 60px;
+            transition: 0.2s;
+        }
+
+        .char-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .char-btn.selected {
+            border-color: #e91e63;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px #e91e63;
+        }
+
+        .char-btn.taken {
+            opacity: 0.3;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+
+        #status-area {
+            flex: 1;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #2196F3;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+        }
+
+        .btn-danger {
+            background: #f44336;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #dice-result {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            color: #e91e63;
+            height: 40px;
+        }
+
+        #turn-indicator {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #ddd;
+            border-radius: 5px;
+        }
+
+        .my-turn {
+            background: #d1c4e9 !important;
+            border: 2px solid #673ab7;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <div id="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        <div id="sidebar">
+            <h2>武士道就是恶魔之路</h2>
+
+            <div id="lobby-ui">
+                <p>请选择一名角色:</p>
+                <div class="char-select" id="char-list">
+                    <!-- JS 生成 -->
+                </div>
+                <button id="start-btn" class="btn btn-primary" disabled>开始游戏 (至少2人)</button>
+            </div>
+
+            <div id="game-ui" style="display: none;">
+                <div id="turn-indicator">等待开始...</div>
+
+                <div id="controls">
+                    <p>选择骰子数量:</p>
+                    <button class="btn btn-primary" onclick="rollDice(1)">投掷 1 个骰子</button>
+                    <button class="btn btn-primary" onclick="rollDice(2)">投掷 2 个骰子</button>
+                </div>
+
+                <div id="dice-result"></div>
+                <button id="end-turn-btn" class="btn btn-success" onclick="endTurn()" disabled>结束回合</button>
+
+                <p style="font-size: 12px; color: #666; margin-top: 20px;">
+                    * 玩法提示: 投掷后，请用鼠标直接拖拽地图上的头像到对应格子。遇到分支请自行决定方向。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 资源
+        const mapImg = new Image();
+        mapImg.src = 'map.png';
+        const charImgs = {};
+        for (let i = 1; i <= 5; i++) {
+            charImgs[i] = new Image();
+            charImgs[i].src = `char${i}.png`;
+        }
+
+        // 状态
+        let myId = null;
+        let myCharId = null;
+        let players = {};
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let gameActive = false;
+        let currentTurnId = null;
+
+        // 初始化 Canvas
+        mapImg.onload = () => {
+            canvas.width = mapImg.width;
+            canvas.height = mapImg.height;
+            draw();
+        };
+
+        // Socket 监听
+        socket.on('connect', () => { myId = socket.id; });
+
+        socket.on('init', (data) => {
+            players = data.players;
+            updateLobby(data.takenChars);
+            if (data.gameStarted) switchToGameUI();
+            draw();
+        });
+
+        socket.on('updatePlayers', (serverPlayers) => {
+            players = serverPlayers;
+            // 检查是否已有足够玩家激活开始按钮
+            const count = Object.keys(players).length;
+            document.getElementById('start-btn').disabled = count < 2;
+            if (count >= 2) document.getElementById('start-btn').innerText = `开始游戏 (${count}人)`;
+            else document.getElementById('start-btn').innerText = `等待玩家 (${count}/5)`;
+
+            draw();
+        });
+
+        socket.on('takenChars', (list) => { updateLobby(list); });
+
+        socket.on('gameStarted', (data) => {
+            switchToGameUI();
+            updateTurn(data.currentTurn);
+        });
+
+        socket.on('diceRolled', (data) => {
+            const resultText = document.getElementById('dice-result');
+            resultText.innerText = `🎲 ${data.details.join(' + ')} = ${data.roll}`;
+            if (data.player === myId) {
+                document.getElementById('end-turn-btn').disabled = false; // 允许结束回合
+                // 禁用投掷按钮
+                document.querySelectorAll('#controls button').forEach(b => b.disabled = true);
+            }
+        });
+
+        socket.on('turnChanged', (data) => {
+            updateTurn(data.currentTurn);
+        });
+
+        socket.on('playerMoved', (data) => {
+            if (players[data.id]) {
+                players[data.id].x = data.x;
+                players[data.id].y = data.y;
+                draw();
+            }
+        });
+
+        socket.on('gameReset', () => {
+            alert('玩家退出，游戏重置');
+            location.reload();
+        });
+
+
+        // 交互逻辑
+        function selectChar(id) {
+            if (myCharId) return;
+            socket.emit('selectCharacter', id);
+            myCharId = id;
+            // 高亮选择
+            document.querySelectorAll('.char-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById(`btn-char-${id}`).classList.add('selected');
+        }
+
+        function updateLobby(takenList) {
+            const container = document.getElementById('char-list');
+            container.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.createElement('div');
+                btn.className = `char-btn ${takenList.includes(i) && i !== myCharId ? 'taken' : ''}`;
+                btn.id = `btn-char-${i}`;
+                btn.innerHTML = `<img src="char${i}.png">`;
+                if (!takenList.includes(i) || i === myCharId) {
+                    btn.onclick = () => selectChar(i);
+                }
+                if (i === myCharId) btn.classList.add('selected');
+                container.appendChild(btn);
+            }
+        }
+
+        document.getElementById('start-btn').onclick = () => {
+            socket.emit('startGame');
+        };
+
+        function switchToGameUI() {
+            gameActive = true;
+            document.getElementById('lobby-ui').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+        }
+
+        function updateTurn(turnId) {
+            currentTurnId = turnId;
+            const isMyTurn = (myId === currentTurnId);
+            const indicator = document.getElementById('turn-indicator');
+            const diceRes = document.getElementById('dice-result');
+            const endBtn = document.getElementById('end-turn-btn');
+
+            diceRes.innerText = '';
+            endBtn.disabled = true;
+
+            const buttons = document.querySelectorAll('#controls button');
+            buttons.forEach(b => b.disabled = !isMyTurn);
+
+            if (isMyTurn) {
+                indicator.innerText = "👉 轮到你了！请投骰子";
+                indicator.classList.add('my-turn');
+            } else {
+                // 找到当前玩家的角色ID来显示名字（如果有名字的话，这里用ID代替）
+                indicator.innerText = "⏳ 等待其他玩家行动...";
+                indicator.classList.remove('my-turn');
+            }
+        }
+
+        window.rollDice = (count) => {
+            socket.emit('rollDice', count);
+        };
+
+        window.endTurn = () => {
+            socket.emit('endTurn');
+        };
+
+        // Canvas 绘制与拖拽
+        function draw() {
+            // 清空
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 画地图
+            if (mapImg.complete) ctx.drawImage(mapImg, 0, 0);
+
+            // 画玩家
+            Object.values(players).forEach(p => {
+                const img = charImgs[p.charId];
+                if (img && img.complete) {
+                    ctx.save();
+                    // 画个圈标记是谁
+                    ctx.beginPath();
+                    ctx.arc(p.x + 40, p.y + 40, 45, 0, Math.PI * 2);
+                    ctx.fillStyle = (p.id === myId) ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)';
+                    ctx.fill();
+                    if (p.id === currentTurnId) {
+                        ctx.strokeStyle = '#e91e63';
+                        ctx.lineWidth = 5;
+                        ctx.stroke();
+                    }
+
+                    // 画头像 (80x80大小)
+                    ctx.drawImage(img, p.x, p.y, 80, 80);
+                    ctx.restore();
+                }
+            });
+        }
+
+        // 鼠标事件处理拖拽
+        canvas.onmousedown = (e) => {
+            if (!myCharId || !players[myId]) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            const p = players[myId];
+            // 检查是否点击了自己的头像 (80x80区域)
+            if (mouseX >= p.x && mouseX <= p.x + 80 && mouseY >= p.y && mouseY <= p.y + 80) {
+                isDragging = true;
+                dragOffset.x = mouseX - p.x;
+                dragOffset.y = mouseY - p.y;
+            }
+        };
+
+        canvas.onmousemove = (e) => {
+            if (!isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            const newX = mouseX - dragOffset.x;
+            const newY = mouseY - dragOffset.y;
+
+            // 本地立即更新显示
+            players[myId].x = newX;
+            players[myId].y = newY;
+            draw();
+
+            // 发送位置给服务器
+            socket.emit('movePlayer', { x: newX, y: newY });
+        };
+
+        canvas.onmouseup = () => {
+            isDragging = false;
+        };
+
+        // 简单的动画循环
+        function loop() {
+            requestAnimationFrame(loop);
+        }
+        loop();
+
+    </script>
+</body>
+
+</html>
