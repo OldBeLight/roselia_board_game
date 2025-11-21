@@ -3,14 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- 视口设置 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>恶魔之路</title>
     <style>
         /* --- 全局基础样式 --- */
         body {
             margin: 0;
-            overflow: hidden; /* 只有body禁止滚动，防止整个网页被拖动 */
+            overflow: hidden;
             font-family: 'Microsoft YaHei', sans-serif;
             background: #222;
             overscroll-behavior: none;
@@ -18,9 +17,9 @@
 
         #game-container {
             display: flex;
-            height: 100vh; /* 占满屏幕 */
+            height: 100vh;
             width: 100vw;
-            flex-direction: row; /* PC默认横向 */
+            flex-direction: row;
         }
 
         /* --- 地图区域 --- */
@@ -38,10 +37,10 @@
             display: block;
             width: 100%;
             height: 100%;
-            touch-action: none; /* 禁止Canvas上的浏览器默认触摸行为 */
+            touch-action: none;
         }
 
-        /* --- PC端侧边栏布局 --- */
+        /* --- 侧边栏布局 --- */
         #sidebar {
             width: 340px;
             background: #f9f9f9;
@@ -52,14 +51,14 @@
             z-index: 10;
             height: 100vh;
             box-sizing: border-box;
-            overflow-y: auto; /* PC端允许侧边栏滚动 */
+            overflow-y: auto; 
         }
 
         #status-area {
             display: flex;
             flex-direction: column;
             flex: 1;
-            overflow: hidden; /* PC端防止撑开，利用flex布局让日志自适应 */
+            overflow: hidden; 
         }
 
         #game-log {
@@ -69,7 +68,7 @@
             padding: 5px 10px;
             border-radius: 5px;
             font-size: 12px;
-            overflow-y: auto; /* PC端日志内部滚动 */
+            overflow-y: auto;
             font-family: monospace;
             border: 2px solid #555;
             min-height: 80px;
@@ -77,20 +76,17 @@
 
         #score-container {
             margin-bottom: 5px;
-            overflow-y: auto; /* PC端积分榜内部滚动 */
+            overflow-y: auto;
             max-height: 120px;
         }
 
-        /* =========================================
-           === 移动端适配核心修改 (Media Query) ===
-           ========================================= */
+        /* --- 移动端适配 --- */
         @media (max-width: 768px) {
             #game-container {
-                flex-direction: column; /* 上下布局 */
+                flex-direction: column; 
             }
 
             #canvas-container {
-                /* 地图区域固定高度，不许伸缩 */
                 height: 45vh; 
                 flex: none; 
                 width: 100%;
@@ -98,71 +94,84 @@
             }
 
             #sidebar {
-                /* 侧边栏占据剩余所有空间 */
                 flex: 1; 
                 width: 100%;
-                height: auto; /* 让flex控制高度 */
+                height: auto;
                 padding: 15px;
                 border-top-left-radius: 15px;
                 border-top-right-radius: 15px;
                 box-shadow: 0 -2px 15px rgba(0,0,0,0.3);
-                
-                /* 核心：允许侧边栏本身滚动 */
                 overflow-y: auto; 
                 -webkit-overflow-scrolling: touch; 
-                
-                /* 底部留出一点空白，防止内容贴底 */
                 padding-bottom: 40px; 
             }
             
             #status-area {
-                /* 取消Flex限制，让内容自然撑开高度 */
                 display: block; 
                 overflow: visible; 
                 height: auto;
                 flex: none;
             }
 
-            /* --- 关键修改：移除内部滚动条，强制展开内容 --- */
             #game-log {
-                /* 移动端日志不固定高度，有多少显示多少 */
                 height: auto !important;
                 max-height: none !important;
                 overflow: visible !important;
                 flex: none;
-                /* 限制最小高度，避免没日志时太丑 */
                 min-height: 100px; 
             }
 
             #score-container {
-                /* 移动端积分榜完全展开 */
                 max-height: none !important;
                 overflow: visible !important;
             }
 
-            /* 调整广告区域 */
             #ad-area {
                 margin-top: 20px;
                 border-top: 1px solid #ccc;
                 padding-top: 10px;
-                /* 确保在滚动流的底部 */
                 position: static; 
             }
 
-            /* 稍微放大一点按钮 */
             h2 { font-size: 18px; }
             .btn { padding: 12px; font-size: 15px; }
             .char-btn { height: 50px; }
         }
 
-        /* --- 通用组件样式 --- */
+        /* --- 组件样式 --- */
         h2 { margin-top: 0; color: #333; text-align: center; font-size: 20px; }
         .room-info { font-size: 12px; color: #666; text-align: center; margin-bottom: 5px; background: #eee; padding: 5px; border-radius: 4px; }
+        
+        /* 角色选择区域 */
         .char-select { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 5px; }
-        .char-btn { border: 2px solid #ccc; border-radius: 5px; cursor: pointer; overflow: hidden; height: 50px; background: #fff; }
+        .char-btn { border: 2px solid #ccc; border-radius: 5px; cursor: pointer; overflow: hidden; height: 50px; background: #fff; position: relative; }
         .char-btn img { width: 100%; height: 100%; object-fit: contain; }
-        .char-btn.selected { border-color: #e91e63; background: #ffe0e9; }
+        
+        /* 选中状态 */
+        .char-btn.selected { 
+            border-color: #e91e63; 
+            background: #ffe0e9; 
+            box-shadow: 0 0 5px #e91e63;
+        }
+        /* 选中时的取消提示 */
+        .char-btn.selected::after {
+            content: "×";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #e91e63;
+            color: white;
+            font-size: 12px;
+            width: 15px;
+            height: 15px;
+            line-height: 14px;
+            text-align: center;
+            border-bottom-left-radius: 5px;
+        }
+
+        /* 被他人占用状态 */
         .char-btn.taken { opacity: 0.4; cursor: not-allowed; filter: grayscale(100%); background: #ddd; }
+
         #waiting-list { font-size: 13px; color: #555; background: #fff; padding: 10px; border-radius: 5px; border: 1px dashed #ccc; margin-bottom: 10px; }
         #game-ui { margin-bottom: 10px; }
         .btn { width: 100%; padding: 10px; margin-top: 5px; border: none; border-radius: 5px; color: white; font-size: 14px; cursor: pointer; user-select: none; }
@@ -190,21 +199,18 @@
         #ad-area { margin-top: auto; padding-top: 10px; border-top: 2px solid #ddd; text-align: center; flex-shrink: 0; }
         .ad-link { display: inline-block; width: 45%; padding: 5px; background: #ffeb3b; color: #d81b60; text-decoration: none; font-weight: bold; border-radius: 5px; font-size: 12px; margin: 0 2px; }
         
-        /* 弹窗 */
         #card-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; }
         .card-content { background: #fff; width: 90%; max-width: 350px; border-radius: 15px; padding: 20px; text-align: center; border: 5px solid #fff; box-shadow: 0 0 50px rgba(255, 255, 255, 0.2); position: relative; box-sizing: border-box; }
         .card-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #eee; }
         .card-desc { font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px; min-height: 60px; display: flex; align-items: center; justify-content: center; }
         .card-close-btn { background: #333; color: white; border: none; padding: 12px 30px; border-radius: 25px; cursor: pointer; font-size: 16px; width: 100%; }
         
-        /* 登录层 */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 100; display: flex; justify-content: center; align-items: center; }
         .login-box { background: white; padding: 30px; border-radius: 10px; width: 300px; max-width: 85%; text-align: center; }
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group input { width: 100%; padding: 10px; box-sizing: border-box; font-size: 16px; }
         .login-btns { display: flex; gap: 10px; }
         
-        /* 滚动条美化 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #222; }
         ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
@@ -230,7 +236,7 @@
             <div class="room-info" id="room-display">未连接</div>
             <div id="status-area">
                 <div id="lobby-ui">
-                    <p>点击头像选择角色:</p>
+                    <p>点击头像选择/取消角色:</p>
                     <div class="char-select" id="char-list"></div>
                     <div id="waiting-list"></div>
                     <button id="start-btn" class="btn btn-primary" disabled>开始游戏</button>
@@ -249,19 +255,14 @@
                     <p id="spectator-msg" style="color:#e91e63; display:none; text-align:center; font-size:12px;">观战模式</p>
                 </div>
                 
-                <!-- 积分榜 -->
                 <div id="score-container">
                     <div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;"><strong style="font-size:14px;">积分榜</strong></div>
                     <div id="score-list"></div>
                 </div>
                 
-                <!-- 日志区域 -->
-                <div id="game-log">
-                    <div class="log-entry" style="color:#aaa">欢迎来到 恶魔之路！</div>
-                </div>
+                <div id="game-log"><div class="log-entry" style="color:#aaa">欢迎来到 恶魔之路！</div></div>
             </div>
             
-            <!-- 广告链接 -->
             <div id="ad-area">
                 <a href="#" class="ad-link">规则书</a>
                 <a href="#" class="ad-link">Github</a>
@@ -287,7 +288,6 @@
         let currentTurnId = null;
         let isGameRunning = false;
 
-        // Camera logic
         let camera = { x: 0, y: 0, scale: 1 };
         let isDraggingPlayer = false;
         let isPanning = false;
@@ -322,15 +322,49 @@
             players = data.players;
             isGameRunning = data.gameStarted;
             playerOrder = data.playerOrder || [];
+            
+            // 同步自己的角色ID
+            const me = Object.values(players).find(p => p.id === myId);
+            myCharId = me ? me.charId : null;
+
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('room-display').innerText = `Room: ${data.roomId}`;
+            
             if (!isGameRunning) updateLobby(data.takenChars);
             updateScoreBoard();
+            
             if (isGameRunning) { switchToGameUI(); updateTurn(data.currentTurn); }
             setTimeout(() => { updateCanvasSize(); resetCamera(); }, 100);
         });
 
-        socket.on('updatePlayers', (p) => { players = p; if(!isGameRunning) updateLobby(Object.values(p).map(x=>x.charId)); updateScoreBoard(); draw(); });
+        // --- 核心更新逻辑 ---
+        socket.on('updatePlayers', (serverPlayers) => {
+            players = serverPlayers;
+            
+            // 每次服务器更新玩家列表，重新同步我的角色状态
+            const me = Object.values(players).find(p => p.id === myId);
+            myCharId = me ? me.charId : null;
+
+            if(!isGameRunning) {
+                // 更新已选角色列表
+                const taken = Object.values(players).map(p => p.charId).filter(id => id);
+                updateLobby(taken);
+            }
+            
+            const count = Object.keys(players).length;
+            const startBtn = document.getElementById('start-btn');
+            if (myCharId) {
+                startBtn.disabled = count < 2;
+                startBtn.innerText = count >= 2 ? `开始 (${count}人)` : `等人...`;
+            } else {
+                startBtn.disabled = true;
+                startBtn.innerText = "请选角色";
+            }
+
+            updateScoreBoard();
+            draw();
+        });
+
         socket.on('gameStarted', (d) => { isGameRunning=true; playerOrder=d.playerOrder; switchToGameUI(); updateTurn(d.currentTurn); updateScoreBoard(); });
         socket.on('diceRolled', (d) => { 
             addLog(getPlayerName(d.player), `掷出 ${d.roll}`); 
@@ -342,31 +376,68 @@
         socket.on('turnChanged', (d) => updateTurn(d.currentTurn));
         socket.on('playerMoved', (d) => { if(players[d.id]){ players[d.id].x=d.x; players[d.id].y=d.y; draw(); } });
 
-        // --- Logic Helpers ---
+        // --- Helpers ---
         function doJoin() { const r=document.getElementById('room-id').value; if(r) socket.emit('joinRoom', {roomId:r, password:document.getElementById('room-pass').value}); }
         function doCreate() { const r=document.getElementById('room-id').value; if(r) socket.emit('createRoom', {roomId:r, password:document.getElementById('room-pass').value}); }
-        function selectChar(id) { if(!myCharId && !isGameRunning) { socket.emit('selectCharacter', id); myCharId=id; updateSelectionHighlight(id); } }
-        function updateSelectionHighlight(id) { document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('selected')); document.getElementById(`btn-char-${id}`)?.classList.add('selected'); }
+
+        // --- 核心修改：选择/取消角色逻辑 ---
+        function selectChar(id) {
+            if (isGameRunning) return;
+
+            // 逻辑：
+            // 1. 如果点击的是我当前的角色 -> 发送 null (取消)
+            // 2. 如果点击的是其他空闲角色 -> 发送 id (切换)
+            
+            if (id === myCharId) {
+                // 取消选择
+                socket.emit('selectCharacter', null);
+                myCharId = null;
+                // 立即更新UI给用户反馈，稍后 updatePlayers 会再次确认
+                document.getElementById(`btn-char-${id}`).classList.remove('selected');
+            } else {
+                // 选择新角色
+                socket.emit('selectCharacter', id);
+                myCharId = id; 
+            }
+        }
+
         function updateLobby(taken) {
-            const list = document.getElementById('char-list'); list.innerHTML='';
-            if(isGameRunning && !myCharId) list.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#999;">观战中</div>';
-            else for(let i=1; i<=5; i++) {
-                const div=document.createElement('div'); div.className=`char-btn ${taken.includes(i)&&i!==myCharId?'taken':''}`; div.id=`btn-char-${i}`;
-                div.innerHTML=`<img src="char${i}.png">`;
-                if((!taken.includes(i)||i===myCharId)&&!isGameRunning) div.onclick=()=>selectChar(i);
-                if(i===myCharId) div.classList.add('selected');
-                list.appendChild(div);
+            const list = document.getElementById('char-list'); 
+            list.innerHTML='';
+            
+            if(isGameRunning && !myCharId) {
+                list.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#999;">观战中</div>';
+            } else {
+                for(let i=1; i<=5; i++) {
+                    const div = document.createElement('div');
+                    const isTaken = taken.includes(i);
+                    const isMine = (i === myCharId);
+                    
+                    // 如果是被别人占用的 -> 灰掉，不可点
+                    // 如果是我的 -> 高亮，可点(用于取消)
+                    // 如果是空的 -> 正常，可点
+                    
+                    if (isTaken && !isMine) {
+                        div.className = 'char-btn taken';
+                    } else {
+                        div.className = `char-btn ${isMine ? 'selected' : ''}`;
+                        div.onclick = () => selectChar(i);
+                    }
+                    
+                    div.id = `btn-char-${i}`;
+                    div.innerHTML = `<img src="char${i}.png">`;
+                    list.appendChild(div);
+                }
             }
             document.getElementById('waiting-list').innerHTML = Array.from({length:5},(_,i)=>`<div><span>角色${i+1}</span><span>${taken.includes(i+1)?'✅':'...'}</span></div>`).join('');
-            const btn=document.getElementById('start-btn');
-            if(myCharId){ btn.disabled=Object.keys(players).length<2; btn.innerText=Object.keys(players).length>=2?`开始 (${Object.keys(players).length})`:'等人...'; }
         }
+
         function updateScoreBoard() {
             const list=document.getElementById('score-list'); list.innerHTML='';
             let order = isGameRunning&&playerOrder.length ? playerOrder.map(id=>players[id]).filter(p=>p) : Object.values(players);
             order.forEach((p,i)=>{
                 const div=document.createElement('div'); div.className='score-item';
-                div.innerHTML=`${isGameRunning?`<span class="turn-order-badge">${i+1}</span>`:''}<img src="char${p.charId}.png"><div class="score-info">角色${p.charId} ${p.id===myId?'(我)':''}</div><div class="score-val">${p.score}</div>${p.id===myId?'<button class="btn btn-xs" onclick="modScore()">修改</button>':''}`;
+                div.innerHTML=`${isGameRunning?`<span class="turn-order-badge">${i+1}</span>`:''}<img src="char${p.charId}.png"><div class="score-info">角色${p.charId} ${p.id===myId?'(我)':''}</div><div class="score-val">${p.score}</div>${p.id===myId?'<button class="btn btn-xs" onclick="modScore()">改</button>':''}`;
                 list.appendChild(div);
             });
         }
