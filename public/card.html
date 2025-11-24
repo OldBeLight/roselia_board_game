@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>命运抽卡系统</title>
+    <style>
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+            --accent: #ffd700;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        /* 抽卡区域 */
+        .gacha-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .card-display {
+            width: 300px;
+            height: 420px;
+            perspective: 1000px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 15px;
+        }
+
+        .card-display.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-size: 2em;
+            font-weight: bold;
+            border: 4px solid var(--accent);
+        }
+
+        .card-back {
+            background: var(--card-bg);
+            color: var(--text);
+            transform: rotateY(180deg);
+            border: 4px solid var(--primary);
+            justify-content: flex-start;
+            padding-top: 40px;
+        }
+
+        .card-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            width: 100%;
+        }
+
+        .card-desc {
+            font-size: 1em;
+            line-height: 1.6;
+            color: #555;
+            white-space: pre-wrap;
+        }
+
+        .btn-draw {
+            background: linear-gradient(45deg, #ff512f, #dd2476);
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.5em;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(221, 36, 118, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-draw:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(221, 36, 118, 0.6);
+        }
+
+        .btn-draw:active {
+            transform: translateY(1px);
+        }
+
+        /* 管理区域 */
+        .admin-panel {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--primary);
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-right: 5px;
+        }
+
+        .btn-delete { background: #ffdddd; color: #d63031; }
+        .btn-edit { background: #e1f0ff; color: #0984e3; }
+        
+        .add-form {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            display: grid;
+            gap: 10px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 80px;
+            gap: 10px;
+        }
+
+        .btn-add {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-reset {
+            background: #636e72;
+            color: white;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #ffeaa7;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #d35400;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎲 命运抽卡系统</h1>
+
+    <div class="gacha-section">
+        <div class="card-display" id="cardDisplay">
+            <div class="card-inner">
+                <div class="card-front">
+                    <div>?</div>
+                    <div style="font-size: 0.5em; margin-top: 10px;">点击下方按钮抽卡</div>
+                </div>
+                <div class="card-back">
+                    <div class="card-title" id="resultTitle">卡片名称</div>
+                    <div class="card-desc" id="resultDesc">卡片效果描述</div>
+                </div>
+            </div>
+        </div>
+        <button class="btn-draw" onclick="drawCard()">抽一张！</button>
+        <div style="margin-top: 10px; color: #666;">当前卡池总数: <span id="totalCardsCount">0</span></div>
+    </div>
+
+    <div class="admin-panel">
+        <div class="panel-header">
+            <h2>🛠️ 卡池管理</h2>
+            <button class="action-btn btn-reset" onclick="resetDefaults()">重置为默认卡池</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%">标题</th>
+                    <th style="width: 45%">内容</th>
+                    <th style="width: 10%">数量</th>
+                    <th style="width: 15%">操作</th>
+                </tr>
+            </thead>
+            <tbody id="cardTableBody">
+                <!-- 卡片列表将在这里生成 -->
+            </tbody>
+        </table>
+
+        <div class="add-form">
+            <h3>添加新卡片</h3>
+            <div class="form-row">
+                <input type="text" id="newTitle" placeholder="卡片标题 (如: 【小猫咪】)">
+                <input type="number" id="newCount" placeholder="数量" value="1" min="1">
+            </div>
+            <textarea id="newDesc" rows="3" placeholder="卡片效果描述..."></textarea>
+            <button class="btn-add" onclick="addNewCard()">添加卡片</button>
+        </div>
+    </div>
+
+    <script>
+        // 默认卡池数据
+        const defaultCards = [
+            {
+                id: 1,
+                title: "【所以说武士道就是恶魔之路】",
+                desc: "去武士道",
+                count: 2
+            },
+            {
+                id: 2,
+                title: "【罪孽深重的女人】",
+                desc: "所有人一起去武士道",
+                count: 1
+            },
+            {
+                id: 3,
+                title: "【小猫咪】",
+                desc: "选择一位玩家，每句话的结尾都要带上喵，如果已经抽到类似卡片，则追加而不是替换。若违反规定，角色不可崩点数+1",
+                count: 1
+            },
+            {
+                id: 4,
+                title: "【大小姐】",
+                desc: "选择一位玩家，每句话的结尾都要带上desuwa，如果已经抽到类似卡片，则追加而不是替换。若违反规定，角色不可崩点数+1",
+                count: 1
+            },
+            {
+                id: 5,
+                title: "【咋瓦鲁多】",
+                desc: "选择一位玩家，跳过此玩家的下一回合",
+                count: 2
+            },
+            {
+                id: 6,
+                title: "【好强的压】",
+                desc: "选择一位玩家，摧毁此玩家拥有的其中一个【巡演地】，此【巡演地】需要重新站在格子上并且【Live挑战】成功才能获得。若有多个巡演地，由抽中卡片的玩家挑选一个摧毁",
+                count: 1
+            },
+            {
+                id: 7,
+                title: "【以牙还牙】",
+                desc: "最近一次被其他玩家施加的【小猫咪】【大小姐】【咋瓦鲁多】【好强的压】效果反弹到该玩家身上。如果负面效果是【小猫咪】【大小姐】，解除抽卡玩家身上的此效果",
+                count: 1
+            },
+            {
+                id: 8,
+                title: "【角色不可崩点数减少5点】",
+                desc: "角色不可崩点数减少5点",
+                count: 2
+            },
+            {
+                id: 9,
+                title: "【千载一遇】",
+                desc: "传送到离没有挑战成功的【Live挑战】相距一格的距离并结束本回合，如果所有【Live挑战】已全部完成，则传送到离【顶点】相距一格的距离。可以任意挑选格子。",
+                count: 1
+            }
+        ];
+
+        let currentPool = [];
+
+        // 初始化
+        function init() {
+            const saved = localStorage.getItem('gachaPool');
+            if (saved) {
+                currentPool = JSON.parse(saved);
+            } else {
+                currentPool = JSON.parse(JSON.stringify(defaultCards));
+            }
+            renderTable();
+        }
+
+        // 保存数据
+        function saveData() {
+            localStorage.setItem('gachaPool', JSON.stringify(currentPool));
+            renderTable();
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('cardTableBody');
+            tbody.innerHTML = '';
+            let totalCount = 0;
+
+            currentPool.forEach((card, index) => {
+                totalCount += parseInt(card.count);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${card.title}</strong></td>
+                    <td style="font-size:0.9em; color:#555;">${card.desc}</td>
+                    <td>
+                        <input type="number" min="1" value="${card.count}" 
+                            style="width: 50px; padding: 5px;"
+                            onchange="updateCount(${index}, this.value)">
+                    </td>
+                    <td>
+                        <button class="action-btn btn-delete" onclick="deleteCard(${index})">删除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totalCardsCount').innerText = totalCount;
+        }
+
+        // 更新数量
+        function updateCount(index, newCount) {
+            if (newCount < 1) newCount = 1;
+            currentPool[index].count = parseInt(newCount);
+            saveData();
+        }
+
+        // 删除卡片
+        function deleteCard(index) {
+            if(confirm('确定要删除这张卡吗？')) {
+                currentPool.splice(index, 1);
+                saveData();
+            }
+        }
+
+        // 添加卡片
+        function addNewCard() {
+            const title = document.getElementById('newTitle').value;
+            const desc = document.getElementById('newDesc').value;
+            const count = parseInt(document.getElementById('newCount').value);
+
+            if (!title || !desc) {
+                alert('请输入标题和描述！');
+                return;
+            }
+
+            currentPool.push({
+                id: Date.now(), // 简单的唯一ID
+                title: title,
+                desc: desc,
+                count: count
+            });
+
+            // 清空输入框
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('newCount').value = '1';
+
+            saveData();
+        }
+
+        // 重置
+        function resetDefaults() {
+            if(confirm('确定要重置所有卡片到默认状态吗？您的自定义修改将丢失。')) {
+                currentPool = JSON.parse(JSON.stringify(defaultCards));
+                saveData();
+            }
+        }
+
+        // 抽卡逻辑
+        function drawCard() {
+            // 检查池子是否为空
+            if (currentPool.length === 0) {
+                alert("卡池是空的，请先添加卡片！");
+                return;
+            }
+
+            // 先重置动画状态
+            const cardDisplay = document.getElementById('cardDisplay');
+            cardDisplay.classList.remove('flipped');
+            
+            // 短暂延迟后开始抽卡逻辑，让翻回背面的动画看起来自然
+            setTimeout(() => {
+                // 1. 构建抽奖池（加权）
+                let weightedPool = [];
+                currentPool.forEach(card => {
+                    for (let i = 0; i < card.count; i++) {
+                        weightedPool.push(card);
+                    }
+                });
+
+                if (weightedPool.length === 0) return;
+
+                // 2. 随机抽取
+                const randomIndex = Math.floor(Math.random() * weightedPool.length);
+                const drawnCard = weightedPool[randomIndex];
+
+                // 3. 更新UI
+                document.getElementById('resultTitle').innerText = drawnCard.title;
+                document.getElementById('resultDesc').innerText = drawnCard.desc;
+
+                // 4. 播放翻转动画
+                cardDisplay.classList.add('flipped');
+            }, 200);
+        }
+
+        // 页面加载时初始化
+        window.onload = init;
+
+    </script>
+</body>
+</html>
