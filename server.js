@@ -8,7 +8,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 卡池定义 ---
 const CARD_DEFINITIONS = [
-    { name: "【所以说武士道就是恶魔之路】", desc: "去武士道", count: 2, color: "#d32f2f" },
+    { name: "【所以说武士道就是恶魔之路】", desc: "去武士道", count: 3, color: "#d32f2f" },
     { name: "【罪孽深重的女人】", desc: "所有人一起去武士道", count: 1, color: "#7b1fa2" },
     { name: "【小猫咪】", desc: "选择一位玩家，每句话的结尾都要带上喵。若违反规定，角色不可崩点数+1。如果已经抽到类似卡片，则追加而不是替换。", count: 1, color: "#f06292" },
     { name: "【大小姐】", desc: "选择一位玩家，每句话的结尾都要带上desuwa。若违反规定，角色不可崩点数+1。如果已经抽到类似卡片，则追加而不是替换。", count: 1, color: "#f06292" },
