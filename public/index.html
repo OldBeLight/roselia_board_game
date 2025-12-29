@@ -369,7 +369,6 @@
         socket.on('diceRolled', (d) => { 
             addLog(getPlayerName(d.player), `掷出 ${d.roll}`); 
             document.getElementById('dice-result').innerText = `🎲 ${d.roll}`;
-            if(d.player===myId) { document.getElementById('end-turn-btn').disabled=false; document.querySelectorAll('#controls button').forEach(b=>b.disabled=true); }
         });
         socket.on('cardResult', (d) => { addLog(getPlayerName(d.player), `抽卡: ${d.card.name}`); showCardModal(d.card.name, d.card.desc, d.card.color); });
         socket.on('log', (d) => addLog("系统", d.text));
